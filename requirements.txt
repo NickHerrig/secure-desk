@@ -54,6 +54,7 @@ mypy-extensions==1.0.0
 networkx==3.2.1
 numpy==1.25.2
 onnxruntime==1.15.1
+onnxruntime-silicon==1.16.3
 opencv-python==4.8.0.76
 opencv-python-headless==4.9.0.80
 packaging==23.2
