@@ -1,0 +1,11 @@
+[app]
+active_learning = false
+roboflow_api_key = ""
+roboflow_model = ""
+alert_endpoint = ""
+
+[rtsp]
+user = "" 
+password = ""
+camera_ip = ""
+port = ""
