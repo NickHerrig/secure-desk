@@ -5,11 +5,8 @@ import time
 import threading
 import logging
 
-
-import onnxruntime as ort
 import supervision as sv
 import toml
-
 from inference import InferencePipeline
 from inference.core.interfaces.stream.sinks import render_boxes
 
@@ -17,23 +14,51 @@ from inference.core.interfaces.stream.sinks import render_boxes
 # global supervision annnotators
 bounding_box = sv.BoundingBoxAnnotator()
 label = sv.LabelAnnotator()
+tracker = sv.ByteTrack()
 
 # global application logic state
 alert_timer_started = False
 should_send_alert = True
-code = "five"
+code_sequence = [2, 0]
+current_code_index = 0
+tracked_codes = set()
+
+
+def check_code_sequence(tracked_detections):
+    """
+    Check if the detected prediction matches the next expected code in the sequence.
+    If the sequence is fully matched, disable the alert.
+    """
+    global current_code_index, should_send_alert
+
+    class_ids = tracked_detections.class_id
+
+    if code_sequence[current_code_index] in class_ids:
+        current_code_index += 1
+        logging.info(f"Correct code entered. Step {current_code_index} of {len(code_sequence)} completed.")
+        
+        if current_code_index == len(code_sequence):
+            logging.info("Correct sequence entered. Desk is unlocked!")
+            should_send_alert = False
+            # Reset for next time
+            current_code_index = 0
+    else:
+        # If the code is incorrect, reset the sequence
+        if current_code_index > 0:
+            logging.info(f"Incorrect code entered. Resetting sequence.")
+            current_code_index = 0
 
 
 def alert_timer(alert_endpoint):
 
     logging.info("You have 10 seconds to crack the code...")
 
-    time.sleep(10)
+    time.sleep(15)
 
     global should_send_alert
     if should_send_alert:
+        logging.info("Intruder detected, sending alert")
         send_alert(alert_endpoint)
-        logging.info("Intruder")
     else:
         logging.info("Desk is unlocked! ")
 
@@ -51,14 +76,13 @@ def send_alert(alert_endpoint):
     Returns:
     Response: The response from the server after the post request is made.
     """    
-    print("sending")
-    # requests.post(alert_endpoint,
-    #     data="Someone is at your desk",
-    #     headers={
-    #         "Title": "Unauthorized access detected",
-    #         "Priority": "urgent",
-    #         "Tags": "warning,skull"
-    #     })
+    requests.post(alert_endpoint,
+        data="Someone is at your desk",
+        headers={
+            "Title": "Unauthorized access detected",
+            "Priority": "urgent",
+            "Tags": "warning,skull"
+        })
  
 
 
@@ -72,6 +96,8 @@ def on_prediction(alert_endpoint, inference_results, frame):
               for class_name, confidence
               in zip(class_names, detections.confidence)]
     
+
+    tracked_detections = tracker.update_with_detections(detections)    
 
     annotated_frame = label.annotate(scene=frame.image.copy(), detections=detections, labels=labels)
     annotated_frame = bounding_box.annotate(scene=annotated_frame, detections=detections)
@@ -91,11 +117,12 @@ def on_prediction(alert_endpoint, inference_results, frame):
         global current_entry
         global code
 
-        # TODO Logic to check if code is being correclty inputted.
-        for pred in class_names:
-            if pred == code:
-                global should_send_alert
-                should_send_alert = False     
+
+        for tracker_id in tracked_detections.tracker_id:
+            if tracker_id not in tracked_codes:
+                tracked_codes.add(tracker_id)
+                check_code_sequence(tracked_detections)
+   
 
     cv2.imshow("Inference", annotated_frame)
     cv2.waitKey(1)
@@ -105,9 +132,6 @@ def main():
 
     # Setup basic logging configuration
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-
-    print("Available Providers: ", ort.get_available_providers())
 
     # Load configuration file and parse values
     config = toml.load('config.toml')
