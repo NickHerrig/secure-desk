@@ -20,6 +20,8 @@ label = sv.LabelAnnotator()
 
 # global application logic state
 alert_timer_started = False
+should_send_alert = True
+code = "five"
 
 
 def alert_timer(alert_endpoint):
@@ -27,9 +29,13 @@ def alert_timer(alert_endpoint):
     logging.info("You have 10 seconds to crack the code...")
 
     time.sleep(10)
-    send_alert(alert_endpoint)
 
-    logging.info("Done waiting.. sending alert")
+    global should_send_alert
+    if should_send_alert:
+        send_alert(alert_endpoint)
+        logging.info("Intruder")
+    else:
+        logging.info("Desk is unlocked! ")
 
 
 def send_alert(alert_endpoint):
@@ -45,13 +51,14 @@ def send_alert(alert_endpoint):
     Returns:
     Response: The response from the server after the post request is made.
     """    
-    requests.post(alert_endpoint,
-        data="Someone is at your desk",
-        headers={
-            "Title": "Unauthorized access detected",
-            "Priority": "urgent",
-            "Tags": "warning,skull"
-        })
+    print("sending")
+    # requests.post(alert_endpoint,
+    #     data="Someone is at your desk",
+    #     headers={
+    #         "Title": "Unauthorized access detected",
+    #         "Priority": "urgent",
+    #         "Tags": "warning,skull"
+    #     })
  
 
 
@@ -62,15 +69,13 @@ def on_prediction(alert_endpoint, inference_results, frame):
     class_names = getattr(detections, 'data', {}).get('class_name', []) if hasattr(detections, 'data') else []
 
     labels = [f"{class_name} - {confidence}" 
-              for class_name, confidence 
+              for class_name, confidence
               in zip(class_names, detections.confidence)]
+    
 
     annotated_frame = label.annotate(scene=frame.image.copy(), detections=detections, labels=labels)
     annotated_frame = bounding_box.annotate(scene=annotated_frame, detections=detections)
 
-
-
-    # Logic for alerting on person...
 
     if "person" in class_names:
 
@@ -83,10 +88,14 @@ def on_prediction(alert_endpoint, inference_results, frame):
 
             alert_timer_thread.start()
 
-        
-        # while counting allow for passcode
-            
-            # If passcode, cancel alert
+        global current_entry
+        global code
+
+        # TODO Logic to check if code is being correclty inputted.
+        for pred in class_names:
+            if pred == code:
+                global should_send_alert
+                should_send_alert = False     
 
     cv2.imshow("Inference", annotated_frame)
     cv2.waitKey(1)
@@ -130,7 +139,6 @@ def main():
         active_learning_enabled=active_learning,
     )
 
-    time.sleep(10)
     pipeline.start()
     pipeline.join()
     
