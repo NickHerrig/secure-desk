@@ -13,7 +13,7 @@ from inference.core.interfaces.stream.sinks import render_boxes
 # global supervision annnotators
 bounding_box = sv.BoundingBoxAnnotator()
 label = sv.LabelAnnotator(text_scale=3, text_thickness=2)
-tracker = sv.ByteTrack()
+tracker = sv.ByteTrack(match_thresh=2)
 
 # global application logic state
 alert_timer_started = False

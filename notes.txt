@@ -1,0 +1,3 @@
+1. Set project image without adding it to the dataset?
+2. Enable/Deploy random active learning whilst using a stub. It was hacking having to train a initial model on 5 images to get active learning setup. 
+3. RTSP Camera features was a learnign curve. First was super laggy frame rate, I had to set the RTSP fps to 30 to fix this. Next was the discovery of Infrared mode for darkness. It was important to train the model on the dark use case awell. 
