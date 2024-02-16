@@ -18,7 +18,7 @@ tracker = sv.ByteTrack()
 # global application logic state
 alert_timer_started = False
 should_send_alert = True
-code_sequence = [2, 0]
+code_sequence = [2, 0, 5]
 current_code_index = 0
 tracked_codes = set()
 desk_unlocked = False
@@ -60,7 +60,7 @@ def check_code_sequence(tracked_detections):
 
 def alert_timer(alert_endpoint):
 
-    for i in range(20, 0, -1):
+    for i in range(30, 0, -1):
         global alert_state_message
         alert_state_message = f"{i} seconds left."
         time.sleep(1)
@@ -106,7 +106,7 @@ def on_prediction(alert_endpoint, inference_results, frame):
 
     class_names = getattr(detections, 'data', {}).get('class_name', []) if hasattr(detections, 'data') else []
 
-    labels = [f"{class_name} - {confidence:02f}" 
+    labels = [f"{class_name} - {confidence:.2f}" 
               for class_name, confidence
               in zip(class_names, detections.confidence)]
     
@@ -119,7 +119,7 @@ def on_prediction(alert_endpoint, inference_results, frame):
     annotated_frame = sv.draw_text(
         scene=annotated_frame,
         text="Secure Desk v0.01",
-        text_anchor= sv.Point(x=700, y=100),
+        text_anchor= sv.Point(x=1700, y=100),
         text_scale=3,
         background_color=sv.Color(r=255, g=255, b=255),
         text_color=sv.Color(r=0, g=0, b=0),
@@ -128,7 +128,7 @@ def on_prediction(alert_endpoint, inference_results, frame):
     annotated_frame = sv.draw_text(
         scene=annotated_frame,
         text=alert_state_message,
-        text_anchor= sv.Point(x=1700, y=100),
+        text_anchor= sv.Point(x=1700, y=500),
         text_scale=2,
         background_color=sv.Color(r=75, g=0, b=130),
         text_color=sv.Color(r=230, g=190, b=255),
@@ -202,6 +202,7 @@ def main():
         video_reference=rtsp_url, 
         on_prediction=alert_config_partial,
         active_learning_enabled=active_learning,
+        confidence=.80
     )
 
     pipeline.start()
