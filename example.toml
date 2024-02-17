@@ -3,6 +3,7 @@ active_learning = false
 roboflow_api_key = ""
 roboflow_model = ""
 alert_endpoint = ""
+code = []
 
 [rtsp]
 user = "" 
